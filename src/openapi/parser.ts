@@ -1,10 +1,10 @@
-import { readFileSync } from "fs";
 import { extname } from "path";
 import { parse as parseYaml } from "yaml";
+import { readFile } from "@src/utils/file-utils.js";
 import { OpenAPIEndpoint, OpenAPIParameter, OpenAPIRequestBody, JSONSchema, ParsedOpenAPI } from "@src/models/types.js";
 
 export function parseOpenAPIFile(filePath: string): ParsedOpenAPI {
-    const content = readFileSync(filePath, "utf-8");
+    const content = readFile(filePath);
     const extension = extname(filePath).toLowerCase();
 
     let spec: any;

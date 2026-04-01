@@ -34,8 +34,12 @@ export const complete = async (
     return content;
 };
 
-export function parseStructuredResponse<T>(response: string, schema: z.ZodSchema<T>): T {
+export function parseStructuredResponse<T>(
+    response: string,
+    schema: z.ZodSchema<T>,
+    normalizer?: (input: unknown) => unknown,
+): T {
     const clean = response.replace(/```json\n?|\n?```/g, "").trim();
-    const parsed = JSON.parse(clean);
-    return schema.parse(parsed);
+    const normalize = normalizer ? (s: string) => normalizer(JSON.parse(s)) : JSON.parse;
+    return schema.parse(normalize(clean));
 }

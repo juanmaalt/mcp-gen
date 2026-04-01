@@ -34,3 +34,42 @@ Return JSON array matching this structure:
   }
 }]`;
 };
+
+export const SYSTEM_PROMPT_TO_OPENAPI = `You are a code analyzer that extracts API endpoints 
+and converts them to OpenAPI 3.0 specifications.
+
+For each endpoint you find:
+1. Identify the HTTP method and URL path
+2. Extract parameters (path, query, body) with types
+3. Understand what the endpoint does
+4. Generate a clear description
+
+Respond with a valid OpenAPI 3.0 JSON only. No markdown, no explanations.`;
+
+export const buildAnalysisPrompt = (code: string, language: string): string => {
+    return `Analyze this ${language} code and extract all API endpoints.
+
+Code:
+\`\`\`${language}
+${code}
+\`\`\`
+
+Return a complete OpenAPI 3.0 specification in JSON:
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "API",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/users/{id}": {
+      "get": {
+        "operationId": "getUserById",
+        "summary": "Get user by ID",
+        "parameters": [...],
+        "responses": {...}
+      }
+    }
+  }
+}`;
+};
