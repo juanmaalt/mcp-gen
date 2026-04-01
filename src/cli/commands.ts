@@ -7,30 +7,32 @@ import { generateMCPDefinition, writeMCPFile } from "@src/generator/mcp-schema.j
 import { MCPDefinition, MCPTool, Options, ParsedOpenAPI } from "@src/models/types.js";
 
 export async function analyzeCommand(path: string, options: Options) {
-    const writer: Writer = new Writer();
+    const writer: Writer = new Writer(options.verbose);
 
     writer.info("Searching for OpenAPI specifications file.");
     const fileResult: FindResult = await resolveOpenAPIFile(path);
 
     if (!fileResult.found && !fileResult.createNew) {
-        writer.error("Process stoped, no OpenAPI file found in the mentioned path and creation was rejected.");
+        writer.error("Process stopped: no OpenAPI file found and creation was rejected.");
         throw Error("No OpenAPI file available.");
     }
 
     let openApiFilePath: string = fileResult.path || "";
 
     if (!fileResult.found && fileResult.createNew) {
-        openApiFilePath = await analyzeCodeAndGenerateOpenAPI(path, options.model);
+        writer.info("No OpenAPI file found. Analyzing source code to generate one...");
+        openApiFilePath = await analyzeCodeAndGenerateOpenAPI(writer, options.model, path);
+        writer.success(`OpenAPI spec generated at: ${openApiFilePath}`);
     }
 
     writer.success("OpenAPI file found, parsing specifications.");
     const parsedOpenAPI: ParsedOpenAPI = parseOpenAPIFile(openApiFilePath);
 
-    writer.info("Transforming OpenAPI specs into MCP tools...");
-    const tools: MCPTool[] = await transform(parsedOpenAPI.endpoints, options.model);
+    writer.info(`Found ${parsedOpenAPI.endpoints.length} endpoint(s). Transforming to MCP tools...`);
+    const tools: MCPTool[] = await transform(writer, options.model, parsedOpenAPI.endpoints);
     const mcpDefinition: MCPDefinition = generateMCPDefinition(tools, openApiFilePath);
 
-    writer.success("MCP tools ready!");
+    writer.success(`MCP tools ready! (${mcpDefinition.metadata.endpointsProcessed} tools generated)`);
     if (options.output != undefined) {
         writeMCPFile(mcpDefinition, options.output);
         writer.success(`MCP definitions file saved at: ${options.output}`);

@@ -38,7 +38,7 @@ npm run dev -- analyze ./docs/openapi.yaml --output tools.json
 # Use a specific OpenAI model
 npm run dev -- analyze ./docs/openapi.yaml --model gpt-4o
 
-# Print the full inputSchema for each tool
+# Show detailed logs for each step of the process
 npm run dev -- analyze ./docs/openapi.yaml --verbose
 ```
 

@@ -3,9 +3,21 @@ import chalk from "chalk";
 const log = console.log;
 
 export class Writer {
-    info = (msg: string) => log(chalk.blue(msg));
-    success = (msg: string) => log(chalk.green(msg));
-    warn = (msg: string) => log(chalk.yellow(msg));
+    private verbose: boolean;
+
+    constructor(_verbose: boolean | undefined) {
+        this.verbose = _verbose || false;
+    }
+
+    info = (msg: string) => {
+        if (this.verbose) log(chalk.blue(msg));
+    };
+    success = (msg: string) => {
+        if (this.verbose) log(chalk.green(msg));
+    };
+    warn = (msg: string) => {
+        if (this.verbose) log(chalk.yellow(msg));
+    };
     error = (msg: string) => log(chalk.red(msg));
     tools = (definitions: string) => log(chalk.bold.cyan(definitions));
 }
