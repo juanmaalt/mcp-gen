@@ -42,19 +42,11 @@ npm run dev -- analyze ./docs/openapi.yaml --model gpt-4o
 npm run dev -- analyze ./docs/openapi.yaml --verbose
 ```
 
-If no OpenAPI file is found automatically, the CLI will prompt you for the path.
+If no OpenAPI file is found automatically, the CLI will prompt you to provide a path or generate one. If you choose to generate, **the full contents of all code files in the project directory are sent to the LLM** — this may consume a significant number of tokens for large codebases.
 
 ## Output
 
-When `--output` is omitted, the generated tools are printed to the console:
-
-```
-get_user_by_id: Retrieves a user by their unique identifier
-create_order: Creates a new order for the authenticated user
-...
-```
-
-When `--output <file>` is specified, a JSON file is written:
+Both stdout and file output share the same JSON format:
 
 ```json
 {
@@ -95,12 +87,14 @@ src/
 ├── cli/
 │   └── commands.ts       # analyze command
 ├── converter/
+│   ├── code-converter.ts # Generates OpenAPI spec from source code via LLM
 │   ├── llm-client.ts     # OpenAI client wrapper
 │   ├── prompts.ts        # System and user prompts
 │   └── transformer.ts    # Orchestrates OpenAPI → MCP conversion
 ├── generator/
 │   └── mcp-schema.ts     # Assembles and writes MCPDefinition
 ├── models/
+│   ├── schemas.ts        # Zod validation schemas
 │   └── types.ts          # TypeScript interfaces
 ├── openapi/
 │   ├── finder.ts         # OpenAPI file discovery

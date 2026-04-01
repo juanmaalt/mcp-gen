@@ -35,13 +35,6 @@ export async function analyzeCommand(path: string, options: Options) {
         writeMCPFile(mcpDefinition, options.output);
         writer.success(`MCP definitions file saved at: ${options.output}`);
     } else {
-        writer.info(`Timestamp: ${mcpDefinition.metadata.generatedAt}`);
-        writer.info(`Source file: ${mcpDefinition.metadata.sourceFile}`);
-        writer.info(`Processed endpoints: ${mcpDefinition.metadata.endpointsProcessed}`);
-
-        writer.info(`MCP definitions:`);
-        mcpDefinition.tools.forEach((tool, index) => {
-            writer.tool(tool, index);
-        });
+        writer.tools(JSON.stringify(mcpDefinition, null, 2));
     }
 }
