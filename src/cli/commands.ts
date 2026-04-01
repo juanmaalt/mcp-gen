@@ -33,11 +33,8 @@ export async function analyzeCommand(path: string, options: Options) {
         writer.info(`Processed endpoints: ${mcpDefinition.metadata.endpointsProcessed}`);
 
         writer.info(`MCP definitions:`);
-        mcpDefinition.tools.forEach((tool) => {
-            writer.tool(tool.name, tool.description);
-            if (options.verbose) {
-                writer.schema(JSON.stringify(tool.inputSchema, null, 2));
-            }
+        mcpDefinition.tools.forEach((tool, index) => {
+            writer.tool(tool, index);
         });
     }
 }

@@ -44,7 +44,7 @@ export interface MCPTool {
     inputSchema: {
         type: "object";
         properties: Record<string, JSONSchema>;
-        required: string[];
+        required?: string[];
     };
 }
 

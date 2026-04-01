@@ -1,4 +1,5 @@
 import chalk from "chalk";
+import { MCPTool } from "@src/models/types.js";
 
 const log = console.log;
 
@@ -7,6 +8,9 @@ export class Writer {
     success = (msg: string) => log(chalk.green(msg));
     warn = (msg: string) => log(chalk.yellow(msg));
     error = (msg: string) => log(chalk.red(msg));
-    tool = (name: string, description: string) => log(chalk.cyan(`${name}: ${description}`));
-    schema = (schema: string) => log(chalk.cyan(schema));
+
+    tool = (tool: MCPTool, index: number) => {
+        log(chalk.bold.cyan(`  [${index + 1}]`));
+        log(JSON.stringify(tool, null, 2));
+    };
 }

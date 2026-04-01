@@ -8,6 +8,10 @@ For each endpoint:
 2. Write a clear description from summary/description
 3. Combine path params, query params, and request body into inputSchema
 
+CRITICAL: inputSchema MUST always have "type": "object" and a "properties" field.
+If the request body is an array, wrap it: use a property like "items" with type "array".
+Never set inputSchema.type to anything other than "object".
+
 Respond with a JSON array only. No markdown, no explanations.`;
 
 export const buildConversionPrompt = (endpoints: OpenAPIEndpoint[]): string => {
