@@ -15,9 +15,7 @@ export class Writer {
     success = (msg: string) => {
         if (this.verbose) log(chalk.green(msg));
     };
-    warn = (msg: string) => {
-        if (this.verbose) log(chalk.yellow(msg));
-    };
+    warn = (msg: string) => log(chalk.yellow(msg));
     error = (msg: string) => log(chalk.red(msg));
     tools = (definitions: string) => log(chalk.bold.cyan(definitions));
 }

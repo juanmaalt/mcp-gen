@@ -87,5 +87,7 @@ function resolveRef(obj: any, spec: any): any {
         resolved = resolved?.[segment];
     }
 
-    return resolved || obj;
+    if (!resolved) return obj;
+
+    return resolveRef(resolved, spec);
 }

@@ -19,7 +19,7 @@ function normalizeInputSchema(tool: Record<string, unknown>): Record<string, unk
     return tool;
 }
 
-function normalizer(input: unknown): any {
+function normalizer(input: unknown): unknown {
     return Array.isArray(input) ? input.map(normalizeInputSchema) : input;
 }
 

@@ -14,18 +14,19 @@ export async function analyzeCommand(path: string, options: Options) {
 
     if (!fileResult.found && !fileResult.createNew) {
         writer.error("Process stopped: no OpenAPI file found and creation was rejected.");
-        throw Error("No OpenAPI file available.");
+        process.exit(1);
     }
 
-    let openApiFilePath: string = fileResult.path || "";
+    let openApiFilePath: string;
 
     if (!fileResult.found && fileResult.createNew) {
         writer.info("No OpenAPI file found. Analyzing source code to generate one...");
         openApiFilePath = await analyzeCodeAndGenerateOpenAPI(writer, options.model, path);
         writer.success(`OpenAPI spec generated at: ${openApiFilePath}`);
+    } else {
+        openApiFilePath = fileResult.path!;
+        writer.success("OpenAPI file found, parsing specifications.");
     }
-
-    writer.success("OpenAPI file found, parsing specifications.");
     const parsedOpenAPI: ParsedOpenAPI = parseOpenAPIFile(openApiFilePath);
 
     writer.info(`Found ${parsedOpenAPI.endpoints.length} endpoint(s). Transforming to MCP tools...`);
@@ -33,7 +34,7 @@ export async function analyzeCommand(path: string, options: Options) {
     const mcpDefinition: MCPDefinition = generateMCPDefinition(tools, openApiFilePath);
 
     writer.success(`MCP tools ready! (${mcpDefinition.metadata.endpointsProcessed} tools generated)`);
-    if (options.output != undefined) {
+    if (options.output !== undefined) {
         writeMCPFile(mcpDefinition, options.output);
         writer.success(`MCP definitions file saved at: ${options.output}`);
     } else {

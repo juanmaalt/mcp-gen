@@ -23,10 +23,6 @@ export function writeOutput(filePath: string, content: string): void {
     writeFileSync(filePath, content, "utf-8");
 }
 
-export function ensureDir(dirPath: string): void {
-    mkdirSync(dirPath, { recursive: true });
-}
-
 export function findFiles(dirPath: string, extensions: string[] = CODE_EXTENSIONS): string[] {
     const results: string[] = [];
 
@@ -44,10 +40,14 @@ export function findFiles(dirPath: string, extensions: string[] = CODE_EXTENSION
         }
     }
 
-    const stat = statSync(dirPath);
-    if (stat.isFile()) {
-        return [dirPath];
+    let stat: ReturnType<typeof statSync>;
+    try {
+        stat = statSync(dirPath);
+    } catch {
+        throw new Error(`Path not found: "${dirPath}"`);
     }
+
+    if (stat.isFile()) return [dirPath];
 
     walk(dirPath);
     return results;

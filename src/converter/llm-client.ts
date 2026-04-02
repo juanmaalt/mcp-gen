@@ -19,7 +19,7 @@ export const complete = async (
     systemPrompt: string,
 ): Promise<string> => {
     const response = await client.chat.completions.create({
-        model: model || "gpt-4o-mini",
+        model: model ?? "gpt-4o-mini",
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: prompt },
@@ -39,7 +39,7 @@ export function parseStructuredResponse<T>(
     schema: z.ZodSchema<T>,
     normalizer?: (input: unknown) => unknown,
 ): T {
-    const clean = response.replace(/```json\n?|\n?```/g, "").trim();
+    const clean = response.replace(/```(?:json)?\n?|\n?```/g, "").trim();
     const normalize = normalizer ? (s: string) => normalizer(JSON.parse(s)) : JSON.parse;
     return schema.parse(normalize(clean));
 }

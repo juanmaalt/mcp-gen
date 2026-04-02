@@ -88,6 +88,7 @@ src/
 │   └── commands.ts       # analyze command
 ├── converter/
 │   ├── code-converter.ts # Generates OpenAPI spec from source code via LLM
+│   ├── code-extractor.ts # Extracts endpoint and class declarations from source files
 │   ├── llm-client.ts     # OpenAI client wrapper
 │   ├── prompts.ts        # System and user prompts
 │   └── transformer.ts    # Orchestrates OpenAPI → MCP conversion

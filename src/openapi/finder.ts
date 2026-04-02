@@ -23,7 +23,13 @@ export interface FindResult {
 }
 
 export function findOpenAPIFile(projectPath: string): string | null {
-    const stat = statSync(projectPath);
+    let stat: ReturnType<typeof statSync>;
+    try {
+        stat = statSync(projectPath);
+    } catch {
+        throw new Error(`Path not found: "${projectPath}"`);
+    }
+
     if (stat.isFile()) {
         return projectPath;
     }
