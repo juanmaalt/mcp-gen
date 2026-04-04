@@ -8,6 +8,8 @@ program
     .description("Analyze code and generate MCP definitions")
     .option("-o, --output <file>", "Output file path. If it's not defined the tools will be displayed in the terminal.")
     .option("-m, --model <model>", "The OpenAI model to use for analysis. By default: gpt-4o-mini")
+    .option("-t, --max-tokens <number>", "Maximum tokens for LLM responses. By default: 16384", parseInt)
+    .option("-c, --chunk-size <number>", "Number of files (code→OpenAPI) or endpoints (OpenAPI→MCP) per LLM request. By default: 5", parseInt)
     .option("-v, --verbose", "Show detailed processing logs")
     .showHelpAfterError()
     .action(analyzeCommand);

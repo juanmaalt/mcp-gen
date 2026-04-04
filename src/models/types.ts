@@ -60,6 +60,8 @@ export interface MCPDefinition {
 export interface Options {
     output?: string;
     model?: string;
+    maxTokens?: number;
+    chunkSize?: number;
     verbose?: boolean;
 }
 

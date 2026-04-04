@@ -23,6 +23,9 @@ export function writeOutput(filePath: string, content: string): void {
     writeFileSync(filePath, content, "utf-8");
 }
 
+const SKIP_DIRS = new Set(["node_modules", "dist", "build", "out", "lib", "coverage", ".git", "test"]);
+const SKIP_FILE_SUFFIXES = [".spec.ts", ".test.ts", ".spec.js", ".test.js", ".d.ts"];
+
 export function findFiles(dirPath: string, extensions: string[] = CODE_EXTENSIONS): string[] {
     const results: string[] = [];
 
@@ -32,9 +35,13 @@ export function findFiles(dirPath: string, extensions: string[] = CODE_EXTENSION
             const fullPath = join(dir, entry);
             const stat = statSync(fullPath);
 
-            if (stat.isDirectory() && !entry.startsWith(".") && entry !== "node_modules") {
+            if (stat.isDirectory() && !entry.startsWith(".") && !SKIP_DIRS.has(entry)) {
                 walk(fullPath);
-            } else if (stat.isFile() && extensions.includes(extname(entry).toLowerCase())) {
+            } else if (
+                stat.isFile() &&
+                extensions.includes(extname(entry).toLowerCase()) &&
+                !SKIP_FILE_SUFFIXES.some((suffix) => entry.endsWith(suffix))
+            ) {
                 results.push(fullPath);
             }
         }

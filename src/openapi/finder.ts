@@ -1,6 +1,7 @@
 import { existsSync, statSync } from "fs";
 import { join } from "path";
-import * as readline from "readline";
+import chalk from "chalk";
+import { ask, askOption, printOptions } from "@src/utils/prompt.js";
 
 const OPENAPI_FILES = [
     "openapi.json",
@@ -30,16 +31,12 @@ export function findOpenAPIFile(projectPath: string): string | null {
         throw new Error(`Path not found: "${projectPath}"`);
     }
 
-    if (stat.isFile()) {
-        return projectPath;
-    }
+    if (stat.isFile()) return projectPath;
 
     for (const dir of SEARCH_DIRS) {
         for (const file of OPENAPI_FILES) {
             const fullPath = join(projectPath, dir, file);
-            if (existsSync(fullPath)) {
-                return fullPath;
-            }
+            if (existsSync(fullPath)) return fullPath;
         }
     }
 
@@ -47,36 +44,28 @@ export function findOpenAPIFile(projectPath: string): string | null {
 }
 
 export async function promptForOpenAPIPath(): Promise<FindResult> {
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout,
-    });
+    console.log(chalk.bold.white("\n  No OpenAPI spec found."));
+    const options = [
+        { key: "G", label: "Generate from source code" },
+        { key: "F", label: "Provide path to an existing file" },
+        { key: "N", label: "Cancel" },
+    ];
+    printOptions(options);
 
-    return new Promise((resolve) => {
-        rl.question(
-            "No OpenAPI file found. Enter path to your OpenAPI file (or press 'N' to create it): ",
-            (answer) => {
-                rl.close();
-                const trimmed = answer.trim();
+    while (true) {
+        const choice = await askOption(options);
 
-                if (trimmed.toLowerCase() === "n") {
-                    resolve({ found: false, createNew: true });
-                } else if (existsSync(trimmed)) {
-                    resolve({ found: true, path: trimmed });
-                } else {
-                    console.error(`File not found: ${trimmed}`);
-                    resolve({ found: false, createNew: false });
-                }
-            },
-        );
-    });
+        if (choice === "g") return { found: false, createNew: true };
+        if (choice === "n") return { found: false, createNew: false };
+
+        const path = await ask("File path");
+        if (existsSync(path)) return { found: true, path };
+        console.log(chalk.red(`  ✖ File not found: "${path}"`));
+    }
 }
 
 export async function resolveOpenAPIFile(inputPath: string): Promise<FindResult> {
     const found = findOpenAPIFile(inputPath);
-    if (found) {
-        return { found: true, path: found };
-    }
-
+    if (found) return { found: true, path: found };
     return promptForOpenAPIPath();
 }

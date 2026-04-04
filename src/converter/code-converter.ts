@@ -1,73 +1,159 @@
-import * as readline from "readline";
 import { Writer } from "@src/utils/logger.js";
 import { OpenAPIZod } from "@src/models/schemas.js";
 import { initClient, complete, parseStructuredResponse } from "@src/converter/llm-client.js";
 import { SYSTEM_PROMPT_TO_OPENAPI, buildAnalysisPrompt } from "@src/converter/prompts.js";
 import { findFiles, readFile, writeOutput, detectLanguage } from "@src/utils/file-utils.js";
-import { getExtractor } from "@src/converter/extractors/extractor-factory.js";
-import { UnsupportedLanguageError } from "@src/converter/extractors/extractor.js";
+import { Options } from "@src/models/types.js";
+import { classifyFiles, ClassifiedFiles } from "@src/converter/file-classifier.js";
+import { ask, parsePaths, printOptions } from "@src/utils/prompt.js";
 
-async function promptProceedWithFullSource(writer: Writer, language: string): Promise<boolean> {
-    writer.warn(
-        `Warning: no extractor available for language "${language}". The full source code will be sent to the LLM.`,
-    );
-    const userInput = readline.createInterface({ input: process.stdin, output: process.stdout });
-    return new Promise((resolve) => {
-        userInput.question("Proceed with full source? (y/N): ", (answer) => {
-            userInput.close();
-            resolve(answer.trim().toLowerCase() === "y");
-        });
-    });
+export class UserAbortError extends Error {
+    constructor() {
+        super("Aborted by user.");
+        this.name = "UserAbortError";
+    }
 }
 
-async function extractCodeSnippets(writer: Writer, files: string[], language: string): Promise<string> {
-    let code = files.map(readFile).join("\n\n");
+async function modifyFiles(writer: Writer, files: string[]): Promise<string[]> {
+    let current = [...files];
 
-    try {
-        const extractor = getExtractor(language);
-        code = extractor.extract(code);
-        writer.info(`Sending ${code.length} characters to LLM (declarations only)...`);
-    } catch (err) {
-        if (!(err instanceof UnsupportedLanguageError)) throw err;
+    while (true) {
+        writer.list("Current files:", current);
+        printOptions([
+            { key: "A", label: "Add files" },
+            { key: "R", label: "Remove files" },
+            { key: "D", label: "Done" },
+        ]);
 
-        const proceed = await promptProceedWithFullSource(writer, language);
-        if (!proceed) throw new Error("Aborted by user.");
-        writer.info(`Sending ${code.length} characters to LLM (full source)...`);
+        const choice = (await ask("Choice")).toLowerCase();
+
+        if (choice === "d" || choice === "") return current;
+
+        if (choice === "a") {
+            const input = await ask("File paths to add (comma-separated)");
+            const toAdd = parsePaths(input).filter((p) => !current.includes(p));
+            current = [...current, ...toAdd];
+            writer.success(`Added ${toAdd.length} file(s).`);
+            continue;
+        }
+
+        if (choice === "r") {
+            const input = await ask("File paths to remove (comma-separated)");
+            const toRemove = new Set(parsePaths(input));
+            const before = current.length;
+            current = current.filter((f) => !toRemove.has(f));
+            writer.success(`Removed ${before - current.length} file(s).`);
+            continue;
+        }
+
+        writer.warn("Invalid option. Enter A, R, or D.");
+    }
+}
+
+async function selectFiles(writer: Writer, classified: ClassifiedFiles): Promise<string[]> {
+    const all = [...classified.route, ...classified.schema];
+
+    writer.step("Detected files to send to the LLM:");
+    writer.list("Route / controller files:", classified.route);
+    writer.list("Schema / type / DTO files:", classified.schema);
+    console.log();
+
+    printOptions([
+        { key: "C", label: "Continue" },
+        { key: "M", label: "Modify" },
+        { key: "N", label: "Cancel" },
+    ]);
+
+    while (true) {
+        const choice = (await ask("Choice")).toLowerCase();
+
+        if (choice === "c") return all;
+        if (choice === "n" || choice === "") throw new UserAbortError();
+        if (choice === "m") return modifyFiles(writer, all);
+
+        writer.warn("Invalid option. Enter C, M, or N.");
+    }
+}
+
+const VALID_PARAMETER_IN = new Set(["query", "path", "header", "cookie"]);
+
+function sanitizeOpenAPIResponse(raw: unknown): unknown {
+    if (typeof raw !== "object" || raw === null || !("paths" in raw)) return raw;
+    const spec = raw as Record<string, unknown>;
+    const paths = spec["paths"] as Record<string, unknown>;
+
+    for (const pathItem of Object.values(paths)) {
+        if (typeof pathItem !== "object" || pathItem === null) continue;
+        for (const operation of Object.values(pathItem as Record<string, unknown>)) {
+            if (typeof operation !== "object" || operation === null) continue;
+            const op = operation as Record<string, unknown>;
+            if (Array.isArray(op["parameters"])) {
+                op["parameters"] = op["parameters"].filter(
+                    (p: unknown) =>
+                        typeof p === "object" &&
+                        p !== null &&
+                        VALID_PARAMETER_IN.has((p as Record<string, string>)["in"]),
+                );
+            }
+        }
     }
 
-    return code;
+    return spec;
+}
+
+const DEFAULT_CHUNK_SIZE = 5;
+
+function chunkArray<T>(arr: T[], size: number): T[][] {
+    const chunks: T[][] = [];
+    for (let i = 0; i < arr.length; i += size) chunks.push(arr.slice(i, i + size));
+    return chunks;
 }
 
 export async function analyzeCodeAndGenerateOpenAPI(
     writer: Writer,
-    model: string | undefined,
+    options: Options,
     projectPath: string,
 ): Promise<string> {
-    const files: string[] = findFiles(projectPath);
-    writer.info(`Found ${files.length} source file(s) to analyze.`);
+    const { model, maxTokens, chunkSize = DEFAULT_CHUNK_SIZE } = options;
+    writer.step("Scanning project files...");
+    const allFiles = findFiles(projectPath);
+    writer.info(`${allFiles.length} source file(s) found.`);
 
-    const langCounts = files.reduce<Record<string, number>>((acc, f) => {
+    const langCounts = allFiles.reduce<Record<string, number>>((acc, f) => {
         const lang = detectLanguage(f);
         acc[lang] = (acc[lang] ?? 0) + 1;
         return acc;
     }, {});
-    const language: string = Object.entries(langCounts).sort(([, count1], [, count2]) => count2 - count1)[0]?.[0] ?? "unknown";
+    const language = Object.entries(langCounts).sort(([, a], [, b]) => b - a)[0]?.[0] ?? "unknown";
     writer.info(`Detected language: ${language}`);
 
-    const code: string = await extractCodeSnippets(writer, files, language);
+    const classified = classifyFiles(allFiles, language);
+    const files = await selectFiles(writer, classified);
 
-    const openapiResult: string = await analyze(model, code, language);
-    const openapi = parseStructuredResponse(openapiResult, OpenAPIZod);
-    writer.success("OpenAPI spec parsed successfully.");
+    writer.step("Generating OpenAPI spec from source code...");
+    files.forEach((f) => writer.info(f));
+
+    const client = initClient();
+    const chunks = chunkArray(files, chunkSize);
+    writer.info(`Processing ${files.length} file(s) in ${chunks.length} chunk(s) of up to ${chunkSize}.`);
+
+    const mergedPaths: Record<string, unknown> = {};
+
+    for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i]!;
+        writer.info(`Chunk ${i + 1}/${chunks.length}: ${chunk.map((f) => f.split("/").pop()).join(", ")}`);
+
+        const code = chunk.map((f) => `// File: ${f}\n${readFile(f)}`).join("\n\n");
+        const result = await complete(client, model, maxTokens, buildAnalysisPrompt(code, language), SYSTEM_PROMPT_TO_OPENAPI);
+        const partial = parseStructuredResponse(result, OpenAPIZod, sanitizeOpenAPIResponse);
+
+        Object.assign(mergedPaths, partial.paths);
+    }
+
+    const openapi = { openapi: "3.0.0", info: { title: "API", version: "1.0.0" }, paths: mergedPaths };
 
     const filePath = `${projectPath}/docs/openapi.json`;
     writeOutput(filePath, JSON.stringify(openapi, null, 2));
 
     return filePath;
-}
-
-async function analyze(model: string | undefined, code: string, language: string): Promise<string> {
-    const analysisPrompt: string = buildAnalysisPrompt(code, language);
-    const client = initClient();
-    return complete(client, model, analysisPrompt, SYSTEM_PROMPT_TO_OPENAPI);
 }
