@@ -7,7 +7,7 @@ import { analyzeCodeAndGenerateOpenAPI, UserAbortError } from "@src/converter/co
 import { generateMCPDefinition, writeMCPFile } from "@src/generator/mcp-schema.js";
 import { MCPTool, Options, ParsedOpenAPI } from "@src/models/types.js";
 
-function resolveOutputPath(analyzedPath: string, filename: string): string {
+export function resolveOutputPath(analyzedPath: string, filename: string): string {
     const name = basename(filename, extname(filename));
     return join(analyzedPath, "docs", `${name}.json`);
 }
