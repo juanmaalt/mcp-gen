@@ -1,13 +1,16 @@
 import { extname, join, dirname } from "path";
 import { readFileSync, writeFileSync, mkdirSync, readdirSync, statSync } from "fs";
 
-const CODE_EXTENSIONS = [".ts", ".js", ".py", ".go"];
+const CODE_EXTENSIONS = [".ts", ".js", ".py", ".go", ".kt", ".java", ".scala"];
 
 const LANG_MAP: Record<string, string> = {
     ".ts": "typescript",
     ".js": "javascript",
     ".py": "python",
     ".go": "go",
+    ".kt": "kotlin",
+    ".java": "java",
+    ".scala": "scala",
 };
 
 export function detectLanguage(filePath: string): string {

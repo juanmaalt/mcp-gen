@@ -36,8 +36,8 @@ npm run dev -- analyze ./my-project/
 # Point directly at an OpenAPI file
 npm run dev -- analyze ./docs/openapi.yaml
 
-# Save output to a file
-npm run dev -- analyze ./docs/openapi.yaml --output tools.json
+# Save output to ./my-project/docs/tools.json
+npm run dev -- analyze ./my-project/ --output tools
 
 # Use a specific OpenAI model
 npm run dev -- analyze ./docs/openapi.yaml --model gpt-4o
@@ -75,6 +75,27 @@ It scans the project directory, detects the dominant language, and classifies fi
 |---|---|
 | Route / controller files | `routes`, `handler`, `controller`, `endpoint`, `main`, `server`, `app`, `router` |
 | Schema / type / DTO files | `model`, `type`, `schema`, `dto`, `payload`, `request`, `response` |
+
+**Kotlin**
+
+| Group | Detected by filename |
+|---|---|
+| Route / controller files | `routes`, `controller`, `handler`, `endpoint`, `resource`, `main`, `application`, `server`, `app` |
+| Schema / type / DTO files | `dto`, `model`, `entity`, `schema`, `payload`, `request`, `response` |
+
+**Java**
+
+| Group | Detected by filename |
+|---|---|
+| Route / controller files | `routes`, `controller`, `handler`, `endpoint`, `resource`, `servlet`, `main`, `application`, `server`, `app` |
+| Schema / type / DTO files | `dto`, `model`, `entity`, `schema`, `payload`, `request`, `response` |
+
+**Scala**
+
+| Group | Detected by filename |
+|---|---|
+| Route / controller files | `routes`, `controller`, `handler`, `endpoint`, `resource`, `main`, `application`, `server`, `app`, `router` |
+| Schema / type / DTO files | `dto`, `model`, `entity`, `schema`, `payload`, `request`, `response` |
 
 You are then shown the detected files and presented with three options:
 
@@ -162,4 +183,4 @@ src/
 
 - Node.js 18+
 - OpenAI API key
-- An OpenAPI 3.x spec, or source code in TypeScript, JavaScript, Python, or Go
+- An OpenAPI 3.x spec, or source code in TypeScript, JavaScript, Python, Go, Kotlin, Java, or Scala

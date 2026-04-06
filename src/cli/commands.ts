@@ -1,3 +1,4 @@
+import { join, basename, extname } from "path";
 import { Writer } from "@src/utils/logger.js";
 import { transform } from "@src/converter/transformer.js";
 import { parseOpenAPIFile } from "@src/openapi/parser.js";
@@ -5,6 +6,11 @@ import { FindResult, resolveOpenAPIFile } from "@src/openapi/finder.js";
 import { analyzeCodeAndGenerateOpenAPI, UserAbortError } from "@src/converter/code-converter.js";
 import { generateMCPDefinition, writeMCPFile } from "@src/generator/mcp-schema.js";
 import { MCPTool, Options, ParsedOpenAPI } from "@src/models/types.js";
+
+function resolveOutputPath(analyzedPath: string, filename: string): string {
+    const name = basename(filename, extname(filename));
+    return join(analyzedPath, "docs", `${name}.json`);
+}
 
 export async function analyzeCommand(path: string, options: Options) {
     const writer: Writer = new Writer(options.verbose);
@@ -45,8 +51,9 @@ export async function analyzeCommand(path: string, options: Options) {
     writer.success(`${mcpDefinition.metadata.endpointsProcessed} MCP tool(s) ready.`);
 
     if (options.output !== undefined) {
-        writeMCPFile(mcpDefinition, options.output);
-        writer.success(`Saved to: ${options.output}`);
+        const outputPath = resolveOutputPath(path, options.output);
+        writeMCPFile(mcpDefinition, outputPath);
+        writer.success(`Saved to: ${outputPath}`);
     } else {
         writer.tools(JSON.stringify(mcpDefinition, null, 2));
     }
